@@ -156,3 +156,22 @@ BEGIN
     RETURN QUERY SELECT p_from_account_id, v_from_balance, p_to_account_id, v_to_balance, trim(p_reference_id);
 END;
 $$;
+
+-- Prevent transaction ledger entries from being changed or deleted.
+CREATE OR REPLACE FUNCTION prevent_transaction_mutation()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RAISE EXCEPTION
+        USING ERRCODE = '55000',
+              MESSAGE = 'TRANSACTIONS_ARE_IMMUTABLE';
+END;
+$$;
+
+DROP TRIGGER IF EXISTS transactions_immutable_trigger ON transactions;
+
+CREATE TRIGGER transactions_immutable_trigger
+BEFORE UPDATE OR DELETE ON transactions
+FOR EACH ROW
+EXECUTE FUNCTION prevent_transaction_mutation();
