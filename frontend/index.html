@@ -1,0 +1,345 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f7f8fc" />
+    <meta
+      name="description"
+      content="BrightBank account management and transaction dashboard."
+    />
+    <title>BrightBank | Banking Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="BrightBank dashboard home">
+          <span class="brand-mark" aria-hidden="true">B</span>
+          <span>BrightBank</span>
+        </a>
+
+        <div class="topbar-right">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span>Banking dashboard</span>
+        </div>
+      </header>
+
+      <main class="page">
+        <section class="welcome-row" aria-labelledby="page-title">
+          <div class="welcome-copy">
+            <p class="eyebrow">ACCOUNT OVERVIEW</p>
+            <h1 id="page-title">Banking dashboard</h1>
+            <p class="subheading">
+              Manage your accounts, track balances, and review transactions.
+            </p>
+          </div>
+
+          <button
+            class="button button-secondary refresh-button"
+            id="refresh-btn"
+            type="button"
+          >
+            <span aria-hidden="true">↻</span>
+            Refresh data
+          </button>
+        </section>
+
+        <div
+          id="notice"
+          class="notice"
+          role="status"
+          aria-live="polite"
+          hidden
+        ></div>
+
+        <section class="summary-grid" aria-label="Account summary">
+          <article class="summary-card">
+            <div class="summary-top">
+              <span class="summary-icon purple" aria-hidden="true">▤</span>
+              <span class="summary-label">Total accounts</span>
+            </div>
+            <p class="summary-value" id="account-count">—</p>
+            <p class="summary-foot">Registered accounts</p>
+          </article>
+
+          <article class="summary-card">
+            <div class="summary-top">
+              <span class="summary-icon green" aria-hidden="true">₹</span>
+              <span class="summary-label">Combined balance</span>
+            </div>
+            <p class="summary-value" id="total-balance">₹0.00</p>
+            <p class="summary-foot">Across all accounts</p>
+          </article>
+
+          <article class="summary-card">
+            <div class="summary-top">
+              <span class="summary-icon orange" aria-hidden="true">↔</span>
+              <span class="summary-label">Selected account</span>
+            </div>
+            <p class="summary-value compact" id="selected-name">
+              None selected
+            </p>
+            <p class="summary-foot" id="selected-balance">
+              Choose an account below
+            </p>
+          </article>
+        </section>
+
+        <section class="content-grid primary-grid" aria-label="Account management">
+          <article class="panel accounts-panel">
+            <div class="panel-heading">
+              <div>
+                <h2>Your accounts</h2>
+                <p>Create an account or select one to manage.</p>
+              </div>
+              <span class="pill" id="accounts-pill">0 accounts</span>
+            </div>
+
+            <form id="create-account-form" class="inline-form">
+              <div class="input-group">
+                <label class="sr-only" for="account-name">Account name</label>
+                <input
+                  id="account-name"
+                  name="name"
+                  type="text"
+                  placeholder="e.g. Everyday Savings"
+                  maxlength="100"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+              <button class="button button-primary create-button" type="submit">
+                <span aria-hidden="true">+</span>
+                Create account
+              </button>
+            </form>
+
+            <div id="accounts-list" class="accounts-list" aria-live="polite">
+              <div class="empty-state">Loading accounts…</div>
+            </div>
+          </article>
+
+          <article class="panel transaction-panel">
+            <div class="panel-heading">
+              <div>
+                <h2>New transaction</h2>
+                <p>Add money to or withdraw money from an account.</p>
+              </div>
+              <span class="pill pill-soft">Validation enabled</span>
+            </div>
+
+            <form id="transaction-form" class="form-stack">
+              <div class="field">
+                <label for="transaction-account">Account</label>
+                <select id="transaction-account" required>
+                  <option value="">Select an account</option>
+                </select>
+              </div>
+
+              <div class="field-row">
+                <div class="field">
+                  <label for="transaction-type">Transaction type</label>
+                  <select id="transaction-type" required>
+                    <option value="credit">Credit · Add money</option>
+                    <option value="debit">Debit · Withdraw money</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label for="transaction-amount">Amount (₹)</label>
+                  <input
+                    id="transaction-amount"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    inputmode="decimal"
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="reference-id">Reference ID</label>
+                <input
+                  id="reference-id"
+                  type="text"
+                  placeholder="e.g. TXN-1001"
+                  maxlength="100"
+                  autocomplete="off"
+                  required
+                />
+                <span class="field-help">
+                  Use a unique reference ID for this account.
+                </span>
+              </div>
+
+              <div class="field">
+                <label for="description">
+                  Description <span class="optional">(optional)</span>
+                </label>
+                <input
+                  id="description"
+                  type="text"
+                  placeholder="What is this transaction for?"
+                  maxlength="250"
+                />
+              </div>
+
+              <button
+                class="button button-primary button-full"
+                type="submit"
+              >
+                Submit transaction
+              </button>
+            </form>
+          </article>
+        </section>
+
+        <section class="content-grid lower-grid" aria-label="Transaction activity">
+          <article class="panel history-panel">
+            <div class="panel-heading history-heading">
+              <div>
+                <h2>Transaction history</h2>
+                <p id="history-subtitle">
+                  Select an account to view its transactions.
+                </p>
+              </div>
+
+              <div class="history-controls">
+                <label class="sr-only" for="history-limit">
+                  Transactions per page
+                </label>
+                <select id="history-limit" class="small-select">
+                  <option value="5">5 per page</option>
+                  <option value="10" selected>10 per page</option>
+                  <option value="20">20 per page</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="table-wrap" role="region" aria-label="Transaction records" tabindex="0">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Transaction</th>
+                    <th scope="col">Reference ID</th>
+                    <th scope="col">Date</th>
+                    <th scope="col" class="align-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody id="transactions-body">
+                  <tr>
+                    <td colspan="4" class="empty-cell">
+                      Select an account to view history.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="pagination">
+              <span id="page-label">Page 1</span>
+              <div class="pagination-buttons">
+                <button
+                  class="button button-secondary button-small"
+                  id="prev-page"
+                  type="button"
+                  disabled
+                >
+                  Previous
+                </button>
+                <button
+                  class="button button-secondary button-small"
+                  id="next-page"
+                  type="button"
+                  disabled
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </article>
+
+          <article class="panel transfer-panel">
+            <div class="panel-heading">
+              <div>
+                <h2>Transfer money</h2>
+                <p>Move funds between two different accounts.</p>
+              </div>
+              <span class="pill">Additional feature</span>
+            </div>
+
+            <form id="transfer-form" class="form-stack">
+              <div class="field">
+                <label for="from-account">From account</label>
+                <select id="from-account" required>
+                  <option value="">Select source account</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="to-account">To account</label>
+                <select id="to-account" required>
+                  <option value="">Select destination account</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="transfer-amount">Amount (₹)</label>
+                <input
+                  id="transfer-amount"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  inputmode="decimal"
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+
+              <div class="field">
+                <label for="transfer-reference">Transfer reference ID</label>
+                <input
+                  id="transfer-reference"
+                  type="text"
+                  maxlength="100"
+                  placeholder="e.g. TRF-1001"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+
+              <button
+                class="button button-secondary button-full"
+                type="submit"
+              >
+                Transfer funds
+              </button>
+
+              <p class="form-note">
+                Transfers should debit and credit both accounts atomically.
+              </p>
+            </form>
+          </article>
+        </section>
+
+        <footer>
+          BrightBank assessment project · HTML, CSS, JavaScript, Node.js,
+          Express and PostgreSQL
+        </footer>
+      </main>
+    </div>
+
+    <script type="module" src="/src/app.js"></script>
+  </body>
+</html>
