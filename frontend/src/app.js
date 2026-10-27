@@ -1,4 +1,3 @@
-
 const API_BASE = (
   import.meta.env.VITE_API_URL || "http://localhost:5000/api"
 ).replace(/\/+$/, "");
@@ -11,6 +10,7 @@ const state = {
   page: 1,
   limit: 10,
   totalPages: 1,
+  filter: "all",
 };
 
 let noticeTimer;
@@ -123,39 +123,36 @@ function accountOptions(selectedId = state.selectedAccountId) {
   const fromSelect = $("#from-account");
   const toSelect = $("#to-account");
 
-  transactionSelect.innerHTML = `
-    <option value="">Select an account</option>
-    ${options}
-  `;
+  if (transactionSelect) transactionSelect.innerHTML = `<option value="">Select an account</option>${options}`;
+  if (fromSelect) fromSelect.innerHTML = `<option value="">Select source account</option>${options}`;
+  if (toSelect) toSelect.innerHTML = `<option value="">Select destination account</option>${options}`;
 
-  fromSelect.innerHTML = `
-    <option value="">Select source account</option>
-    ${options}
-  `;
-
-  toSelect.innerHTML = `
-    <option value="">Select destination account</option>
-    ${options}
-  `;
-
-  if (state.accounts.some((account) => account.id === selectedId)) {
+  if (transactionSelect && state.accounts.some((account) => account.id === selectedId)) {
     transactionSelect.value = selectedId;
   }
 }
 
 function renderAccounts() {
-  $("#account-count").textContent = state.accounts.length;
+  const accountCountEl = $("#account-count");
+  const accountsPillEl = $("#accounts-pill");
+  const totalBalanceEl = $("#total-balance");
+  const selectedNameEl = $("#selected-name");
+  const selectedBalanceEl = $("#selected-balance");
+  const accountsList = $("#accounts-list");
 
-  $("#accounts-pill").textContent =
-    `${state.accounts.length} ` +
-    `account${state.accounts.length === 1 ? "" : "s"}`;
+  if (accountCountEl) accountCountEl.textContent = state.accounts.length;
+  if (accountsPillEl) {
+    accountsPillEl.textContent =
+      `${state.accounts.length} ` +
+      `account${state.accounts.length === 1 ? "" : "s"}`;
+  }
 
   const combinedBalance = state.accounts.reduce(
     (total, account) => total + Number(account.balance || 0),
     0
   );
 
-  $("#total-balance").textContent = money(combinedBalance);
+  if (totalBalanceEl) totalBalanceEl.textContent = money(combinedBalance);
 
   if (
     !state.accounts.some(
@@ -169,71 +166,75 @@ function renderAccounts() {
     (account) => account.id === state.selectedAccountId
   );
 
-  $("#selected-name").textContent =
-    selectedAccount?.name || "None selected";
+  if (selectedNameEl) selectedNameEl.textContent = selectedAccount?.name || "None selected";
+  if (selectedBalanceEl) {
+    selectedBalanceEl.textContent = selectedAccount
+      ? `${money(selectedAccount.balance)} available balance`
+      : "Choose an account below";
+  }
 
-  $("#selected-balance").textContent = selectedAccount
-    ? `${money(selectedAccount.balance)} available balance`
-    : "Choose an account below";
+  if (accountsList) {
+    if (!state.accounts.length) {
+      accountsList.innerHTML = `
+        <div class="empty-state">
+          No accounts yet. Create your first account above.
+        </div>
+      `;
+    } else {
+      accountsList.innerHTML = state.accounts
+        .map((account) => {
+          const isSelected = account.id === state.selectedAccountId;
+          const initial = account.name?.trim().charAt(0).toUpperCase() || "A";
 
-  const accountsList = $("#accounts-list");
+          return `
+            <button
+              class="account-item ${isSelected ? "account-item-active" : ""}"
+              data-account-id="${escapeHtml(account.id)}"
+              type="button"
+              aria-pressed="${isSelected}"
+            >
+              <span class="account-avatar">
+                ${escapeHtml(initial)}
+              </span>
 
-  if (!state.accounts.length) {
-    accountsList.innerHTML = `
-      <div class="empty-state">
-        No accounts yet. Create your first account above.
-      </div>
-    `;
-  } else {
-    accountsList.innerHTML = state.accounts
-      .map((account) => {
-        const isSelected =
-          account.id === state.selectedAccountId;
+              <span class="account-info">
+                <strong>${escapeHtml(account.name)}</strong>
+                <small>Created ${dateTime(account.created_at)}</small>
+              </span>
 
-        const initial =
-          account.name?.trim().charAt(0).toUpperCase() || "A";
-
-        return `
-          <button
-            class="account-item ${isSelected ? "account-item-active" : ""}"
-            data-account-id="${escapeHtml(account.id)}"
-            type="button"
-            aria-pressed="${isSelected}"
-          >
-            <span class="account-avatar">
-              ${escapeHtml(initial)}
-            </span>
-
-            <span class="account-info">
-              <strong>${escapeHtml(account.name)}</strong>
-              <small>Created ${dateTime(account.created_at)}</small>
-            </span>
-
-            <span class="account-balance">
-              ${money(account.balance)}
-              <small>Available balance</small>
-            </span>
-          </button>
-        `;
-      })
-      .join("");
+              <span class="account-balance">
+                ${money(account.balance)}
+                <small>Available balance</small>
+              </span>
+            </button>
+          `;
+        })
+        .join("");
+    }
   }
 
   accountOptions();
 }
 
 function renderEmptyHistory(message) {
-  $("#transactions-body").innerHTML = `
-    <tr>
-      <td colspan="4" class="empty-cell">
-        ${escapeHtml(message)}
-      </td>
-    </tr>
-  `;
+  const body = $("#transactions-body");
+  if (body) {
+    body.innerHTML = `
+      <tr>
+        <td colspan="4" class="empty-cell">
+          ${escapeHtml(message)}
+        </td>
+      </tr>
+    `;
+  }
 
-  $("#page-label").textContent = "Page 1 of 1";
-  $("#prev-page").disabled = true;
-  $("#next-page").disabled = true;
+  const pageLabel = $("#page-label");
+  const prevPage = $("#prev-page");
+  const nextPage = $("#next-page");
+
+  if (pageLabel) pageLabel.textContent = "Page 1 of 1";
+  if (prevPage) prevPage.disabled = true;
+  if (nextPage) nextPage.disabled = true;
 }
 
 async function loadTransactions() {
@@ -241,32 +242,34 @@ async function loadTransactions() {
     (item) => item.id === state.selectedAccountId
   );
 
+  const historySubtitle = $("#history-subtitle");
+
   if (!account) {
-    $("#history-subtitle").textContent =
-      "Select an account to view its transactions.";
-
-    renderEmptyHistory(
-      "Create or select an account to get started."
-    );
-
+    if (historySubtitle) {
+      historySubtitle.textContent = "Select an account to view its transactions.";
+    }
+    renderEmptyHistory("Create or select an account to get started.");
     return;
   }
 
-  $("#history-subtitle").textContent =
-    `Recent activity for ${account.name}`;
+  if (historySubtitle) {
+    historySubtitle.textContent = `Recent activity for ${account.name}`;
+  }
 
   const query = new URLSearchParams({
     page: String(state.page),
     limit: String(state.limit),
   });
 
+  if (state.filter && state.filter !== "all") {
+    query.append("type", state.filter);
+  }
+
   const payload = await api(
     `/accounts/${encodeURIComponent(account.id)}/transactions?${query}`
   );
 
-  const transactions = Array.isArray(payload.data)
-    ? payload.data
-    : [];
+  let transactions = Array.isArray(payload.data) ? payload.data : [];
 
   const pagination = payload.pagination || {};
 
@@ -275,7 +278,6 @@ async function loadTransactions() {
     1
   );
 
-  // Keep the current page valid if records have changed.
   if (state.page > state.totalPages) {
     state.page = state.totalPages;
 
@@ -284,13 +286,15 @@ async function loadTransactions() {
       limit: String(state.limit),
     });
 
+    if (state.filter && state.filter !== "all") {
+      correctedQuery.append("type", state.filter);
+    }
+
     const correctedPayload = await api(
       `/accounts/${encodeURIComponent(account.id)}/transactions?${correctedQuery}`
     );
 
-    const correctedTransactions = Array.isArray(
-      correctedPayload.data
-    )
+    transactions = Array.isArray(correctedPayload.data)
       ? correctedPayload.data
       : [];
 
@@ -299,7 +303,7 @@ async function loadTransactions() {
       1
     );
 
-    renderTransactions(correctedTransactions);
+    renderTransactions(transactions);
     return;
   }
 
@@ -307,12 +311,15 @@ async function loadTransactions() {
 }
 
 function renderTransactions(transactions) {
+  const body = $("#transactions-body");
+  if (!body) return;
+
   if (!transactions.length) {
     renderEmptyHistory("No transactions for this account yet.");
     return;
   }
 
-  $("#transactions-body").innerHTML = transactions
+  body.innerHTML = transactions
     .map((transaction) => {
       const isCredit = transaction.type === "credit";
       const typeClass = isCredit ? "credit" : "debit";
@@ -353,11 +360,13 @@ function renderTransactions(transactions) {
     })
     .join("");
 
-  $("#page-label").textContent =
-    `Page ${state.page} of ${state.totalPages}`;
+  const pageLabel = $("#page-label");
+  const prevPage = $("#prev-page");
+  const nextPage = $("#next-page");
 
-  $("#prev-page").disabled = state.page <= 1;
-  $("#next-page").disabled = state.page >= state.totalPages;
+  if (pageLabel) pageLabel.textContent = `Page ${state.page} of ${state.totalPages}`;
+  if (prevPage) prevPage.disabled = state.page <= 1;
+  if (nextPage) nextPage.disabled = state.page >= state.totalPages;
 }
 
 async function refresh({ keepPage = false } = {}) {
@@ -382,10 +391,37 @@ async function refresh({ keepPage = false } = {}) {
   await loadTransactions();
 }
 
+// Sidebar View Switching Logic (Refreshes data on tab change)
+const navLinks = document.querySelectorAll('.sidebar-nav .nav-link');
+const appViews = document.querySelectorAll('.app-view');
+
+navLinks.forEach(link => {
+  link.addEventListener('click', async () => {
+    const targetId = link.getAttribute('data-target');
+
+    navLinks.forEach(btn => btn.classList.remove('active'));
+    link.classList.add('active');
+
+    appViews.forEach(view => {
+      if (view.id === targetId) {
+        view.classList.add('active');
+      } else {
+        view.classList.remove('active');
+      }
+    });
+
+    try {
+      await refresh({ keepPage: true });
+    } catch (error) {
+      console.error("Failed to refresh data on view switch:", error);
+    }
+  });
+});
+
 // Create an account
-$("#create-account-form").addEventListener(
-  "submit",
-  async (event) => {
+const createAccountForm = $("#create-account-form");
+if (createAccountForm) {
+  createAccountForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const input = $("#account-name");
@@ -398,7 +434,6 @@ $("#create-account-form").addEventListener(
     }
 
     const submitButton = event.submitter;
-
     if (submitButton) submitButton.disabled = true;
 
     try {
@@ -409,42 +444,42 @@ $("#create-account-form").addEventListener(
 
       state.selectedAccountId = result.data.id;
       state.page = 1;
-
       input.value = "";
 
       await refresh();
-
       showNotice("Account created successfully.");
     } catch (error) {
       showNotice(error.message, "error");
     } finally {
       if (submitButton) submitButton.disabled = false;
     }
-  }
-);
+  });
+}
 
 // Select an account from the accounts list
-$("#accounts-list").addEventListener("click", async (event) => {
-  const button = event.target.closest("[data-account-id]");
+const accountsListEl = $("#accounts-list");
+if (accountsListEl) {
+  accountsListEl.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-account-id]");
+    if (!button) return;
 
-  if (!button) return;
+    state.selectedAccountId = button.dataset.accountId;
+    state.page = 1;
 
-  state.selectedAccountId = button.dataset.accountId;
-  state.page = 1;
+    renderAccounts();
 
-  renderAccounts();
-
-  try {
-    await loadTransactions();
-  } catch (error) {
-    showNotice(error.message, "error");
-  }
-});
+    try {
+      await loadTransactions();
+    } catch (error) {
+      showNotice(error.message, "error");
+    }
+  });
+}
 
 // Change the account from the transaction form
-$("#transaction-account").addEventListener(
-  "change",
-  async (event) => {
+const transactionAccountEl = $("#transaction-account");
+if (transactionAccountEl) {
+  transactionAccountEl.addEventListener("change", async (event) => {
     state.selectedAccountId = event.target.value;
     state.page = 1;
 
@@ -455,13 +490,13 @@ $("#transaction-account").addEventListener(
     } catch (error) {
       showNotice(error.message, "error");
     }
-  }
-);
+  });
+}
 
 // Create a credit or debit transaction
-$("#transaction-form").addEventListener(
-  "submit",
-  async (event) => {
+const transactionFormEl = $("#transaction-form");
+if (transactionFormEl) {
+  transactionFormEl.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const accountId = $("#transaction-account").value;
@@ -493,7 +528,6 @@ $("#transaction-form").addEventListener(
     };
 
     const submitButton = event.submitter;
-
     if (submitButton) submitButton.disabled = true;
 
     try {
@@ -520,13 +554,13 @@ $("#transaction-form").addEventListener(
     } finally {
       if (submitButton) submitButton.disabled = false;
     }
-  }
-);
+  });
+}
 
 // Transfer money between accounts
-$("#transfer-form").addEventListener(
-  "submit",
-  async (event) => {
+const transferFormEl = $("#transfer-form");
+if (transferFormEl) {
+  transferFormEl.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const from = $("#from-account").value;
@@ -535,18 +569,12 @@ $("#transfer-form").addEventListener(
     const referenceId = $("#transfer-reference").value.trim();
 
     if (!from || !to) {
-      showNotice(
-        "Select both source and destination accounts.",
-        "error"
-      );
+      showNotice("Select both source and destination accounts.", "error");
       return;
     }
 
     if (from === to) {
-      showNotice(
-        "Choose two different accounts for the transfer.",
-        "error"
-      );
+      showNotice("Choose two different accounts for the transfer.", "error");
       return;
     }
 
@@ -557,16 +585,12 @@ $("#transfer-form").addEventListener(
     }
 
     if (!referenceId) {
-      showNotice(
-        "Please enter a transfer reference ID.",
-        "error"
-      );
+      showNotice("Please enter a transfer reference ID.", "error");
       $("#transfer-reference").focus();
       return;
     }
 
     const submitButton = event.submitter;
-
     if (submitButton) submitButton.disabled = true;
 
     try {
@@ -594,29 +618,45 @@ $("#transfer-form").addEventListener(
     } finally {
       if (submitButton) submitButton.disabled = false;
     }
-  }
-);
+  });
+}
 
 // Refresh the dashboard
-$("#refresh-btn").addEventListener("click", async () => {
-  const button = $("#refresh-btn");
+const refreshBtn = $("#refresh-btn");
+if (refreshBtn) {
+  refreshBtn.addEventListener("click", async () => {
+    refreshBtn.disabled = true;
 
-  button.disabled = true;
+    try {
+      await refresh({ keepPage: true });
+      showNotice("Dashboard refreshed successfully.");
+    } catch (error) {
+      showNotice(error.message, "error");
+    } finally {
+      refreshBtn.disabled = false;
+    }
+  });
+}
 
-  try {
-    await refresh({ keepPage: true });
-    showNotice("Dashboard refreshed successfully.");
-  } catch (error) {
-    showNotice(error.message, "error");
-  } finally {
-    button.disabled = false;
-  }
-});
+// Filter transactions by type
+const historyFilter = $("#history-filter");
+if (historyFilter) {
+  historyFilter.addEventListener("change", async (event) => {
+    state.filter = event.target.value;
+    state.page = 1;
+
+    try {
+      await loadTransactions();
+    } catch (error) {
+      showNotice(error.message, "error");
+    }
+  });
+}
 
 // Change the number of transactions shown per page
-$("#history-limit").addEventListener(
-  "change",
-  async (event) => {
+const historyLimit = $("#history-limit");
+if (historyLimit) {
+  historyLimit.addEventListener("change", async (event) => {
     state.limit = Number(event.target.value);
     state.page = 1;
 
@@ -625,46 +665,54 @@ $("#history-limit").addEventListener(
     } catch (error) {
       showNotice(error.message, "error");
     }
-  }
-);
+  });
+}
 
 // Previous page
-$("#prev-page").addEventListener("click", async () => {
-  if (state.page <= 1) return;
+const prevPageBtn = $("#prev-page");
+if (prevPageBtn) {
+  prevPageBtn.addEventListener("click", async () => {
+    if (state.page <= 1) return;
 
-  state.page -= 1;
+    state.page -= 1;
 
-  try {
-    await loadTransactions();
-  } catch (error) {
-    state.page += 1;
-    showNotice(error.message, "error");
-  }
-});
+    try {
+      await loadTransactions();
+    } catch (error) {
+      state.page += 1;
+      showNotice(error.message, "error");
+    }
+  });
+}
 
 // Next page
-$("#next-page").addEventListener("click", async () => {
-  if (state.page >= state.totalPages) return;
+const nextPageBtn = $("#next-page");
+if (nextPageBtn) {
+  nextPageBtn.addEventListener("click", async () => {
+    if (state.page >= state.totalPages) return;
 
-  state.page += 1;
+    state.page += 1;
 
-  try {
-    await loadTransactions();
-  } catch (error) {
-    state.page -= 1;
-    showNotice(error.message, "error");
-  }
-});
+    try {
+      await loadTransactions();
+    } catch (error) {
+      state.page -= 1;
+      showNotice(error.message, "error");
+    }
+  });
+}
 
 // Initial dashboard load
 refresh().catch((error) => {
-  $("#accounts-list").innerHTML = `
-    <div class="empty-state">
-      Unable to load accounts. Check the backend server and database configuration.
-    </div>
-  `;
+  const accountsList = $("#accounts-list");
+  if (accountsList) {
+    accountsList.innerHTML = `
+      <div class="empty-state">
+        Unable to load accounts. Check the backend server and database configuration.
+      </div>
+    `;
+  }
 
   renderEmptyHistory("Transactions could not be loaded.");
-
   showNotice(error.message, "error");
 });
